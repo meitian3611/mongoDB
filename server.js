@@ -7,10 +7,17 @@ const app = express()
 const PostModel = require('./models/post')
 const UserModel = require('./models/user')
 
+//使用那种模板引擎，模板页面的存放路径
+app.set('view engine', 'ejs')
+app.set('views', path.resolve(__dirname, './views'))
+
 
 //req.body中间件的设置
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+//静态资源的托管
+app.use(express.static(path.resolve(__dirname, './public')))
 
 
 //新增文章
@@ -146,4 +153,52 @@ app.post('/api/login', async (req, res) => {
         })
     }
 })
+
+
+
+/**
+ * 前后端不分离写法
+ */
+
+//文章列表
+app.get('/posts', async (req, res) => {
+    //获取分页的参数
+    let pageNum = parseInt(req.query.pageNum) || 1
+    let pageSize = parseInt(req.query.pageSize) || 5
+
+    const posts = await PostModel.find().skip((pageNum - 1) * pageSize).limit(pageSize).sort({ _id: -1 })
+
+    //获取总条数
+    const count = await PostModel.find().countDocuments()
+    //根据总页数，算出总条数
+    const totalPages = Math.ceil(count / pageSize)
+
+    res.render('post/index', { posts, totalPages, pageNum })
+
+})
+
+//文章新增
+app.get('/posts/create', async (req, res) => {
+    res.render('post/create')
+})
+//文章新增处理
+app.post('/posts/store', async (req, res) => {
+    // console.log(req.body);
+    //把前端的数据写入数据库
+    const post = new PostModel(req.body)
+    await post.save()
+
+    res.redirect('/posts')
+})
+
+//文章详情
+app.get('/posts/:id', async (req, res) => {
+    let id = req.params.id
+
+    const post = await PostModel.findOne({ _id: id })
+
+    res.render('post/show', { post })
+})
+
+
 app.listen(8080)
