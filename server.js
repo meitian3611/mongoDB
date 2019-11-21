@@ -200,5 +200,44 @@ app.get('/posts/:id', async (req, res) => {
     res.render('post/show', { post })
 })
 
+//登录页面
+app.get('/login', async (req, res) => {
+    res.render('login')
+})
+
+//注册页面  
+app.get('/register', async (req, res) => {
+    res.render('register')
+
+})
+app.post('/registerAction', async (req, res) => {
+    const user = new UserModel({
+        username: req.body.username,
+        password: await bcryptjs.hash(req.body.password, 12)
+    })
+    await user.save()
+    res.redirect('/login')
+})
+
+app.post('/loginAction', async (req, res) => {
+    let username = req.body.username
+    let password = req.body.password
+    let isOk = false
+    const user = await UserModel.findOne({ username })
+
+    if (user) {
+        isOk = await bcryptjs.compare(password, user.password)
+    }
+    if (isOk) {
+        res.redirect('/posts')
+    } else {
+        res.send('用户名或密码不正确')
+    }
+})
+
+
+
+
+
 
 app.listen(8080)
