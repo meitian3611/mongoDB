@@ -1,8 +1,11 @@
 const express = require('express')
+const path = require('path')
+const bcryptjs = require('bcryptjs')
 const app = express()
 
 //引入数据库相关model文件
 const PostModel = require('./models/post')
+const UserModel = require('./models/user')
 
 
 //req.body中间件的设置
@@ -86,7 +89,6 @@ app.put('/api/posts/:id/update', async (req, res) => {
     let title = req.body.title
 
     //3. 找到对应的文章并修改
-
     await PostModel.updateOne({ _id: id }, req.body)
 
     res.send({
@@ -95,5 +97,53 @@ app.put('/api/posts/:id/update', async (req, res) => {
     })
 })
 
+//注册
+app.post('/api/users', async (req, res) => {
+    let username = req.body.username
+    let password = req.body.password
 
+    password = await bcryptjs.hash(password, 12)
+
+    const user = new UserModel({
+        username,
+        password
+    })
+    await user.save()
+    res.send({
+        code: 0,
+        msg: 'ok'
+    })
+})
+
+
+//登录
+app.post('/api/login', async (req, res) => {
+    let username = req.body.username
+    let password = req.body.password
+
+    // 根据用户名查找用户
+    const user = await UserModel.findOne({ username })
+
+    let isOk = false
+
+    if (user) {
+        isOk = await bcryptjs.compare(password, user.password)
+    }
+
+    if (isOk) {
+        res.send({
+            code: 0,
+            msg: 'ok',
+            data: {
+                userId: user._id,
+                username: user.username
+            }
+        })
+    } else {
+        res.send({
+            code: '-1',
+            msg: '用户名或者密码错误'
+        })
+    }
+})
 app.listen(8080)
